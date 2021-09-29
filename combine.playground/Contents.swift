@@ -186,6 +186,7 @@ Just(7)
     .sink { print($0) }
 */
 
+/*
 // tests
 import XCTest
 
@@ -258,3 +259,27 @@ XCTestObservationCenter.shared.addTestObserver(observer)
 
 MyTests.defaultTestSuite.run()
  
+*/
+
+struct Post: Codable {
+    let userId: Int
+    let id: Int
+    let title: String
+    let body: String
+}
+
+let emptyPost = Post(userId: 0, id: 0, title: "Empty", body: "no results")
+let url = URL(string: "https://jsonplaceholder.typicode.com/posts")!
+let publisher = URLSession.shared.dataTaskPublisher(for: url)
+    .map { $0.data }
+    .decode(type: [Post].self, decoder: JSONDecoder())
+    .map{ $0.first }
+    .replaceNil(with: emptyPost)
+    .compactMap({$0.title})
+
+let cancellableSink = publisher
+    .sink(receiveCompletion: { completion in
+        print(String(describing: completion))
+    }) { value in
+        print(value)
+    }
