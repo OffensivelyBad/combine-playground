@@ -260,7 +260,7 @@ XCTestObservationCenter.shared.addTestObserver(observer)
 MyTests.defaultTestSuite.run()
  
 */
-
+/*
 struct Post: Codable {
     let userId: Int
     let id: Int
@@ -283,3 +283,86 @@ let cancellableSink = publisher
     }) { value in
         print(value)
     }
+*/
+
+/*
+struct Post: Codable {
+    let userId: Int
+    let id: Int
+    let title: String
+    let body: String
+}
+
+print("publisher: on main thread?: \(Thread.current.isMainThread)")
+print("publisher: thread info: \(Thread.current)")
+
+let url = URL(string: "https://jsonplaceholder.typicode.com/posts")!
+let queue = DispatchQueue(label: " a queue")
+let publisher = URLSession.shared.dataTaskPublisher(for: url)
+    .map { $0.data }
+    .decode(type: [Post].self, decoder: JSONDecoder())
+
+print("publisher: on main thread?: \(Thread.current.isMainThread)")
+print("publisher: thread info: \(Thread.current)")
+
+let cancellableSink = publisher
+    .subscribe(on: queue)
+//    .receive(on: DispatchQueue.main)
+//    .receive(on: DispatchQueue.global())
+    .sink { completion in
+        print("subscriber: on main thread?: \(Thread.current.isMainThread)")
+        print("subscriber: thread info: \(Thread.current)")
+    } receiveValue: { value in
+        print("subscriber: on main thread?: \(Thread.current.isMainThread)")
+        print("subscriber: thread info: \(Thread.current)")
+    }
+*/
+
+/*
+// custom publisher
+
+extension Publisher {
+    func isPrimeInteger<T: BinaryInteger>() -> Publishers.CompactMap<Self, T> where
+        Output == T {
+        compactMap(self.isPrime)
+    }
+    
+    func isPrime<T: BinaryInteger>(_ n: T) -> T? {
+        guard n != 2 else { return n }
+        guard n % 2 != 0 && n > 1 else { return nil }
+        
+        var i = 3
+        while i * i <= n {
+            if (Int(n) % i) == 0 {
+                return nil
+            }
+            i += 2
+        }
+        
+        return n
+    }
+}
+
+let numbers: [Int] = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+
+numbers.publisher.isPrimeInteger().sink { print( $0 )}
+*/
+
+// backpressure
+let cityPublisher = (["San Jose", "San Francisco", "Menlo Park", "Palo Alto"]).publisher
+
+final class CitySubscriber: Subscriber {
+    func receive(subscription: Subscription) {
+        subscription.request(.max(2))
+    }
+    func receive(_ input: String) -> Subscribers.Demand {
+        print("City: \(input)")
+        return .none
+    }
+    func receive(completion: Subscribers.Completion<Never>) {
+        print("subscription \(completion)")
+    }
+}
+
+let citySubscription = CitySubscriber()
+cityPublisher.subscribe(citySubscription)
